@@ -84,7 +84,6 @@ public class ResourceRequestController {
 	   // expiresAt String을 LocalDateTime으로 파싱
 	   if (expiresAtStr != null && !expiresAtStr.isEmpty()) {
 		   try {
-			   // ISO 형식 파싱 (예: "2026-01-31T09:00:00+09:00")
 			   java.time.OffsetDateTime offsetDateTime = java.time.OffsetDateTime.parse(
 				   expiresAtStr, 
 				   DateTimeFormatter.ISO_OFFSET_DATE_TIME

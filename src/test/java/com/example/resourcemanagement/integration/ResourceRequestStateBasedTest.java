@@ -25,8 +25,6 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.sql.DataSource;
-
-import com.example.resourcemanagement.dto.AccountResponseDto;
 import com.example.resourcemanagement.dto.ActionPayloadDto;
 import com.example.resourcemanagement.entity.Account;
 import com.example.resourcemanagement.entity.Resource;
