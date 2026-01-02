@@ -35,6 +35,7 @@ import com.example.resourcemanagement.repository.AccountRepository;
 import com.example.resourcemanagement.repository.ResourceAllocationRepository;
 import com.example.resourcemanagement.repository.ResourceRepository;
 import com.example.resourcemanagement.repository.ResourceRequestRepository;
+import com.example.resourcemanagement.service.ResourceRequestService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -67,60 +68,72 @@ class ResourceRequestStateBasedTest {
 
     @Autowired
     private ResourceRequestRepository resourceRequestRepository;
+    
+    @Autowired
+    private ResourceRequestService resourceRequestService;
 
     @Autowired
     private ObjectMapper objectMapper;
     
     @Autowired
     private DataSource dataSource;  // DB 연결 정보 확인용
+
+	private Long accountId;
     
 
     @BeforeEach
     void setUp() {
-        // 테스트 전 초기화
-        // 기존 DB 데이터는 유지하고 ResourceRequest만 삭제
-        //resourceRequestRepository.deleteAll();
-        /// accountRepository.deleteAll();  // 기존 Account 유지
-        // resourceRepository.deleteAll();  // 실제 MySQL DB의 Resource는 유지
+        resourceAllocationRepository.deleteAll();
+        resourceRequestRepository.deleteAll();
+        accountRepository.deleteAll();
+        
+        Account account = new Account();
+        account.setAdmin("admin1");
+        account.setName("Account-1");
+        Account savedAccount = accountRepository.save(account);
+
+        this.accountId = savedAccount.getId(); 
+        Resource resource = resourceRepository.findById(1L)
+        		.orElseThrow(() -> new IllegalArgumentException("Resource not found"));
+        
+        ResourceRequest initialRequest = new ResourceRequest();
+        initialRequest.setAccount(savedAccount);
+        initialRequest.setResources(resource);
+        initialRequest.setType(ResourceType.cpu);
+        initialRequest.setQuota(500.0);
+        initialRequest.setUnit("core");
+        initialRequest.setRequestedAt(LocalDateTime.now());
+        
+        // ResourceRequestService를 통해 저장하면 ResourceAllocation도 자동 생성됨
+        resourceRequestService.createResourceRequest(initialRequest);
     }
 
     @Test
     @DisplayName("TC1: 자원요청 누적으로 계정 quota 누적")
     void testTC1_CreateResourceRequest_AccumulateQuota() throws Exception {
-        Long accountId = 12L;
-        Optional<Account> existingAccount = accountRepository.findById(accountId);
-        if (!existingAccount.isPresent()) {
-            List<Account> allAccounts = accountRepository.findAll();
-            accountId = allAccounts.get(0).getId();
-            existingAccount = Optional.of(allAccounts.get(0));
-        }
-        Account savedAccount = existingAccount.get();
-        
-        Long resourceId = 1L;
-        Optional<Resource> existingResource = resourceRepository.findById(resourceId);
-        
+
         // ========== When: action 실행 ==========
         Map<String, Object> actionPayload = new HashMap<>();
         actionPayload.put("accountId", accountId);
-        actionPayload.put("resourceId", resourceId);  
+        actionPayload.put("resourceId", 1L);  
         actionPayload.put("requestedAt", "2025-12-31T09:00:00+09:00");
         actionPayload.put("expiresAt", "2026-01-31T09:00:00+09:00");
         actionPayload.put("type","cpu");
         actionPayload.put("unit","core");
         actionPayload.put("quota", 100.0);
-        MvcResult result = mockMvc.perform(post("/resource-requests")
+        
+        for(int i = 0;i<3;i++) {
+        mockMvc.perform(post("/resource-requests")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(actionPayload)))
                 .andExpect(status().isCreated())
                 .andReturn();
-
+        }
         List<ResourceAllocation> requests = resourceAllocationRepository.findAll();
-        //assertEquals(1, requests.size());
         
         ResourceAllocation createdRequest = requests.get(0);
-        assertEquals(600, createdRequest.getQuota());
+        assertEquals(800, createdRequest.getQuota());
         
-        // Account 확인
     }
 
 }
