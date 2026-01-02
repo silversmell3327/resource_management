@@ -1,0 +1,51 @@
+{
+  "id": "TC1",
+  "title": "자원요청 누적으로 계정 quota 누적",
+  "initialState": {
+    "accounts": [
+      {
+        "id": "A1",
+        "name": "Account-1",
+        "admin": "admin1",
+        "resources": [],
+        "projectIds": []
+      }
+    ],
+    "projects": []
+  },
+  "action": {
+    "type": "CreateResourceRequest",
+    "payload": {
+      "accountId": "A1",
+      "requestedAt": "2025-12-31T09:00:00+09:00",
+      "expiresAt": "2026-01-31T09:00:00+09:00",
+      "message": "cpu 100",
+      "resources": [
+        {
+          "type": "cpu",
+          "modelId": null,
+          "unit": "core",
+          "quota": 100.0
+        }
+      ]
+    }
+  },
+  "expectedState": {
+    "accounts": [
+      {
+        "id": "A1",
+        "resources": [
+          {
+            "type": "cpu",
+            "modelId": null,
+            "unit": "core",
+            "quota": 100.0,
+            "allocated": 0.0,
+            "available": 100.0
+          }
+        ]
+      }
+    ]
+  }
+}
+
