@@ -78,7 +78,6 @@ public class Resource {
 	}
 
 	@Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long Id;
 	

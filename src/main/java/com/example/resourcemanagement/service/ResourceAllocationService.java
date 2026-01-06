@@ -39,7 +39,6 @@ public class ResourceAllocationService {
 		Long resourcId = resourceRequest.getResources().getId();
 		Double quota = resourceRequest.getQuota();
 	    ResourceAllocation allocation = new ResourceAllocation();
-
 		ResourceAllocation resourceAllocation = resourceAllocationRepository
 				.findByAccount_IdAndResource_Id(accountId, resourcId);
 		if(resourceAllocation==null) { //신규할당
@@ -55,6 +54,34 @@ public class ResourceAllocationService {
 		}else { //이미 할당받은 경우
 			resourceAllocation.setQuota(resourceAllocation.getQuota()+quota);
 			resourceAllocation.setAvailable(resourceAllocation.getQuota()-resourceAllocation.getAllocated());
+			resourceAllocationRepository.save(resourceAllocation);
+		}
+	     resourceRequestRepository.save(resourceRequest);
+	}
+	
+	@Transactional
+	public void allocateGpuByModel(ResourceRequest resourceRequest){
+		Long accountId = resourceRequest.getAccount().getId();
+		Long resourcId = resourceRequest.getResources().getId();
+		Double quota = resourceRequest.getQuota();
+		String modelId = resourceRequest.getModelId();
+		ResourceAllocation allocation = new ResourceAllocation();
+		ResourceAllocation resourceAllocation = resourceAllocationRepository
+				.findByAccount_IdAndResource_IdAndModelId(accountId, resourcId,modelId);
+		if(resourceAllocation==null) { //신규할당
+		    allocation.setAccount(resourceRequest.getAccount());
+		    allocation.setResource(resourceRequest.getResources());
+		    allocation.setResourceRequest(resourceRequest);
+		    allocation.setType(resourceRequest.getType());
+		    allocation.setModelId(resourceRequest.getModelId());
+		    allocation.setQuota(resourceRequest.getQuota());
+		    allocation.setAllocated(0);
+		    allocation.setAvailable(resourceRequest.getQuota());
+			resourceAllocationRepository.save(allocation);
+		}else { //이미 할당받은 경우
+			resourceAllocation.setQuota(resourceAllocation.getQuota()+quota);
+			resourceAllocation.setAvailable(resourceAllocation.getQuota()-resourceAllocation.getAllocated());
+			resourceAllocationRepository.save(resourceAllocation);
 		}
 	     resourceRequestRepository.save(resourceRequest);
 	}

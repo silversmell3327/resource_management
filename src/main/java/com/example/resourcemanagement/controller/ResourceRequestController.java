@@ -100,6 +100,58 @@ public class ResourceRequestController {
 	            .status(HttpStatus.CREATED)
 	            .body(createdRequest);  // 생성된 엔티티 반환
  }
+   
+   
+   @PostMapping ("/gpu")
+  	public ResponseEntity<?> allocateGpuByModel(
+  			@RequestBody Map<String,Object> body) {
+	    Long accountId = extractLongValue(body, "accountId");
+	    Long resourceId = extractLongValue(body, "resourceId");
+	   String expiresAtStr = (String) body.get("expiresAt");
+	   String unit = (String) body.get("unit");
+	   Object quotaObj = body.get("quota");
+	   double quota = quotaObj instanceof Number ? ((Number) quotaObj).doubleValue() : 0.0;
+	   String modelId = (String) body.get("modelId");
+	   String typeStr = (String) body.get("type");
+	   ResourceType type = null;
+	   if (typeStr != null) {
+		   try {
+			   type = ResourceType.valueOf(typeStr.toLowerCase());
+		   } catch (IllegalArgumentException e) {
+			   throw new IllegalArgumentException("Invalid ResourceType: " + typeStr);
+		   }
+	   }
+	   
+	   ResourceRequest resourceRequest = new ResourceRequest();
+	   Account account  = new Account();
+	   account.setId(accountId);
+	   Resource resource = new Resource();
+	   resource.setId(resourceId);
+	   resourceRequest.setAccount(account);
+	   resourceRequest.setResources(resource);
+	   resourceRequest.setQuota(quota);
+	   resourceRequest.setUnit(unit);
+	   resourceRequest.setType(type);
+	   resourceRequest.setModelId(modelId);
+	   // expiresAt String을 LocalDateTime으로 파싱
+	   if (expiresAtStr != null && !expiresAtStr.isEmpty()) {
+		   try {
+			   java.time.OffsetDateTime offsetDateTime = java.time.OffsetDateTime.parse(
+				   expiresAtStr, 
+				   DateTimeFormatter.ISO_OFFSET_DATE_TIME
+			   );
+			   resourceRequest.setExpiresAt(offsetDateTime.toLocalDateTime());
+		   } catch (Exception e) {
+			   // 파싱 실패 시 null로 설정 (또는 예외 처리)
+			   resourceRequest.setExpiresAt(null);
+		   }
+	   }
+	   ResourceRequest createdRequest = resourceRequestService.allocateGpuByModel(resourceRequest);
+	   
+	    return ResponseEntity
+	            .status(HttpStatus.CREATED)
+	            .body(createdRequest);  // 생성된 엔티티 반환
+}
 
 // 헬퍼 메서드
 private Long extractLongValue(Map<String, Object> body, String key) {

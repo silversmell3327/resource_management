@@ -50,5 +50,23 @@ public class ResourceRequestService {
 		 
 		 return saved;
 	}
+	
+	@Transactional
+	public ResourceRequest allocateGpuByModel(ResourceRequest resourceRequest){
+		
+		Account account = accountRepository //계정이 있으면 통과
+				.findById(resourceRequest.getAccount().getId())
+	            .orElseThrow(() -> new IllegalArgumentException("Account not found: "));
+	    Resource resource = resourceRepository //해당 자원이 있으면 통과
+	    		.findById(resourceRequest.getResources().getId())
+	    		.orElseThrow(() -> new IllegalArgumentException("Resource not found: "));
+	    if (resourceRequest.getRequestedAt() == null) {
+	    	resourceRequest.setRequestedAt(LocalDateTime.now());
+	    }
+	    ResourceRequest saved = resourceRequestRepository.save(resourceRequest);
+		 resourceAllocationService.allocateGpuByModel(saved);
+		 
+		 return saved;
+	}
 
 }
