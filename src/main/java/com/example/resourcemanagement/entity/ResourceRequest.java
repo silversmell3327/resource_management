@@ -64,42 +64,6 @@ public class ResourceRequest {
 	public void setAccount(Account account) {
 		this.account = account;
 	}
-    public ResourceType getType() {
-		return type;
-	}
-
-	public void setType(ResourceType type) {
-		this.type = type;
-	}
-
-	public Double getQuota() {
-		return quota;
-	}
-
-	public void setQuota(double quota) {
-		this.quota = quota;
-	}
-
-	public String getUnit() {
-		return unit;
-	}
-
-	public void setUnit(String unit) {
-		this.unit = unit;
-	}
-    public String getModelId() {
-		return modelId;
-	}
-
-	public void setModelId(String modelId) {
-		this.modelId = modelId;
-	}
-
-	public void setQuota(Double quota) {
-		this.quota = quota;
-	}
-
-
 	@Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
@@ -111,32 +75,8 @@ public class ResourceRequest {
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
-	@Column(name = "model_id")
-    private String modelId;
-    
-	@Enumerated(EnumType.STRING)  // ⭐ 핵심
-    private ResourceType type;
-    
-	@Column(name="quota")
-    private Double quota;
-    
-    @Column(name="unit")
-    private String unit;
-
 	@ManyToOne
 	@JoinColumn(name = "account_id")
 	private Account account;
-	
-	
-	@ManyToOne
-	@JoinColumn(name = "resource_id")
-    private Resource resources;
 
-	public Resource getResources() {
-		return resources;
-	}
-
-	public void setResources(Resource resources) {
-		this.resources = resources;
-	}
 }

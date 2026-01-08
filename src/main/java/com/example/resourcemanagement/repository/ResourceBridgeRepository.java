@@ -10,6 +10,6 @@ import com.example.resourcemanagement.entity.ResourceBridge;
 import com.example.resourcemanagement.entity.ResourceType;
 
 @Repository
-public interface ResourceRepository extends JpaRepository<Resource, Long> {
+public interface ResourceBridgeRepository extends JpaRepository<ResourceBridge, Long> {
 
 }

@@ -9,9 +9,11 @@ import org.springframework.stereotype.Service;
 
 import com.example.resourcemanagement.entity.Account;
 import com.example.resourcemanagement.entity.Resource;
+import com.example.resourcemanagement.entity.ResourceBridge;
 import com.example.resourcemanagement.entity.ResourceRequest;
 import com.example.resourcemanagement.repository.AccountRepository;
 import com.example.resourcemanagement.repository.ResourceAllocationRepository;
+import com.example.resourcemanagement.repository.ResourceBridgeRepository;
 import com.example.resourcemanagement.repository.ResourceRepository;
 import com.example.resourcemanagement.repository.ResourceRequestRepository;
 
@@ -25,6 +27,9 @@ public class ResourceRequestService {
 	
 	@Autowired
 	ResourceRepository resourceRepository; 
+	
+	@Autowired
+	ResourceBridgeRepository resourceBridgeRepository; 
 	
 	
 	@Autowired
@@ -45,8 +50,13 @@ public class ResourceRequestService {
 	    if (resourceRequest.getRequestedAt() == null) {
 	    	resourceRequest.setRequestedAt(LocalDateTime.now());
 	    }
+	    
+	    ResourceBridge resourceBridge = new ResourceBridge();
+	    resourceBridge.setResource(resource);
+	    resourceBridge.setEntity("request");
 	    ResourceRequest saved = resourceRequestRepository.save(resourceRequest);
 		 resourceAllocationService.createResourceAllocation(saved);
+		 resourceBridgeRepository.save(resourceBridge);
 		 
 		 return saved;
 	}
@@ -63,8 +73,13 @@ public class ResourceRequestService {
 	    if (resourceRequest.getRequestedAt() == null) {
 	    	resourceRequest.setRequestedAt(LocalDateTime.now());
 	    }
+	    
+	    ResourceBridge resourceBridge = new ResourceBridge();
+	    resourceBridge.setResource(resource);
+	    resourceBridge.setEntity("request");
 	    ResourceRequest saved = resourceRequestRepository.save(resourceRequest);
 		 resourceAllocationService.allocateGpuByModel(saved);
+		 resourceBridgeRepository.save(resourceBridge);
 		 
 		 return saved;
 	}

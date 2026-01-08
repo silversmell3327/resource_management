@@ -28,12 +28,14 @@ import org.springframework.transaction.annotation.Transactional;
 import javax.sql.DataSource;
 import com.example.resourcemanagement.dto.ActionPayloadDto;
 import com.example.resourcemanagement.entity.Account;
+import com.example.resourcemanagement.entity.Project;
 import com.example.resourcemanagement.entity.Resource;
 import com.example.resourcemanagement.entity.ResourceAllocation;
 import com.example.resourcemanagement.entity.ResourceBridge;
 import com.example.resourcemanagement.entity.ResourceRequest;
 import com.example.resourcemanagement.entity.ResourceType;
 import com.example.resourcemanagement.repository.AccountRepository;
+import com.example.resourcemanagement.repository.ProjectRepository;
 import com.example.resourcemanagement.repository.ResourceAllocationRepository;
 import com.example.resourcemanagement.repository.ResourceBridgeRepository;
 import com.example.resourcemanagement.repository.ResourceRepository;
@@ -55,7 +57,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 // @Transactional 제거 - 실제 MySQL DB 사용을 위해
 @ActiveProfiles("test")
 @DisplayName("ResourceRequest 상태 기반 통합 테스트")
-class ResourceRequestStateBasedTest {
+class AddProjectToAccountTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -65,6 +67,9 @@ class ResourceRequestStateBasedTest {
 
     @Autowired
     private ResourceRepository resourceRepository;
+    
+    @Autowired
+    private ProjectRepository projectRepository;
     
     @Autowired
     private ResourceBridgeRepository resourceBridgeRepository;
@@ -91,10 +96,17 @@ class ResourceRequestStateBasedTest {
     @BeforeEach
     void setUp() {
         Account account = new Account();
-        account.setAdmin("admin1");
-        account.setName("Account-1");
+        account.setAdmin("admin3");
+        account.setName("Account-3");
         Account savedAccount = accountRepository.save(account);
-
+        
+        Project pj = new Project();
+        pj.setType(ResourceType.cpu);
+        pj.setQuota(10);
+        pj.setAvailable(10);
+        pj.setUnit("core");
+        projectRepository.save(pj);
+        
         this.accountId = savedAccount.getId(); 
         Resource resource = new Resource();
         ArrayList type = new ArrayList();
@@ -102,6 +114,7 @@ class ResourceRequestStateBasedTest {
         type.add(ResourceType.gpu);
         type.add(ResourceType.memory);
         type.add(ResourceType.storage);
+        
         for(int i = 1 ;i<5;i++) {
         Resource res = new Resource();
         res.setId((long) i);
@@ -112,7 +125,6 @@ class ResourceRequestStateBasedTest {
         resourceRepository.save(res);
         }
         
-        // 초기 ResourceRequest를 위해 resource ID 1 (cpu) 조회
         Resource initialResource = resourceRepository.findById(1L)
         		.orElseThrow(() -> new IllegalArgumentException("Resource not found"));
         
@@ -124,8 +136,15 @@ class ResourceRequestStateBasedTest {
         initialRequest.setUnit("core");
         initialRequest.setRequestedAt(LocalDateTime.now());
 
-        resourceRequestService.createResourceRequest(initialRequest);
-    }
+        
+        ResourceAllocation ra = new ResourceAllocation();
+        ra.setAccount(savedAccount);
+        ra.setType(ResourceType.cpu);
+        ra.setQuota(10.0);    
+        ra.setAvailable(10.0);
+        ra.setUnit("core");
+        ra.setResource(initialResource);
+        }
     
     @AfterEach
     void tearDown() {
