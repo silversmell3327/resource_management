@@ -12,20 +12,6 @@ import com.example.resourcemanagement.entity.ResourceType;
 
 @Repository
 public interface ResourceAllocationRepository extends JpaRepository<ResourceAllocation, Long> {
-	ResourceAllocation findByAccount_IdAndResource_Id(
-			Long accountId,
-	        Long resourceId
-	);
-	
-	List<ResourceAllocation> findAllByAccount_IdAndType(
-			Long accountId,
-		    ResourceType type
-		);
-	
-	ResourceAllocation findByAccount_IdAndResource_IdAndModelId(
-		    Long accountId,
-		    Long resourceId,
-		    String modelId
-	);
+	List<ResourceAllocation> findByResourceRequestId(Long resourceRequestId);
 
 }

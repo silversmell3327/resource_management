@@ -7,10 +7,13 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import com.example.resourcemanagement.dto.ResourceRequestDto;
 import com.example.resourcemanagement.entity.Account;
 import com.example.resourcemanagement.entity.Resource;
+import com.example.resourcemanagement.entity.ResourceAllocation;
 import com.example.resourcemanagement.entity.ResourceBridge;
 import com.example.resourcemanagement.entity.ResourceRequest;
+import com.example.resourcemanagement.entity.ResourceType;
 import com.example.resourcemanagement.repository.AccountRepository;
 import com.example.resourcemanagement.repository.ResourceAllocationRepository;
 import com.example.resourcemanagement.repository.ResourceBridgeRepository;
@@ -36,52 +39,53 @@ public class ResourceRequestService {
 	ResourceRequestRepository resourceRequestRepository; 
 	
 	@Autowired
-	ResourceAllocationService resourceAllocationService; 
+	ResourceAllocationService resourceAllocationService;
+	
+	@Autowired
+	IdGenerationService idGenerationService;
+	
+	@Autowired
+	ResourceAllocationRepository resourceAllocationRepository;
 	
 	@Transactional
-	public ResourceRequest createResourceRequest(ResourceRequest resourceRequest){
-		
-		Account account = accountRepository //계정이 있으면 통과
-				.findById(resourceRequest.getAccount().getId())
-	            .orElseThrow(() -> new IllegalArgumentException("Account not found: "));
-	    Resource resource = resourceRepository //해당 자원이 있으면 통과
-	    		.findById(resourceRequest.getResources().getId())
-	    		.orElseThrow(() -> new IllegalArgumentException("Resource not found: "));
-	    if (resourceRequest.getRequestedAt() == null) {
-	    	resourceRequest.setRequestedAt(LocalDateTime.now());
-	    }
-	    
-	    ResourceBridge resourceBridge = new ResourceBridge();
-	    resourceBridge.setResource(resource);
-	    resourceBridge.setEntity("request");
-	    ResourceRequest saved = resourceRequestRepository.save(resourceRequest);
-		 resourceAllocationService.createResourceAllocation(saved);
-		 resourceBridgeRepository.save(resourceBridge);
-		 
-		 return saved;
-	}
+    public Long createResourceRequest(ResourceRequestDto dto) {
+        // 1. Account 조회
+        Account account = accountRepository.findById(dto.getAccountId())
+            .orElseThrow(() -> new IllegalArgumentException("Account not found"));
+        
+        // 2. ResourceRequest 생성 (ID: 10~99)
+        ResourceRequest resourceRequest = new ResourceRequest();
+        Long requestId = idGenerationService.generateRequestId();
+        resourceRequest.setId(requestId);
+        resourceRequest.setAccount(account);
+        resourceRequest.setRequestedAt(dto.getRequestedAt());
+        resourceRequest.setExpiresAt(dto.getExpiresAt());
+        resourceRequestRepository.save(resourceRequest);
+        
+        // 3. Resource 생성 및 브릿지 연결
+        for (ResourceRequestDto.ResourceDto resourceDto : dto.getResources()) {
+            // Resource 생성 (ID: 100~999)
+            Resource resource = new Resource();
+            Long resourceId = idGenerationService.generateResourceId();
+            resource.setId(resourceId);
+            resource.setType(ResourceType.valueOf(resourceDto.getType()));
+            resource.setModelId(resourceDto.getModelId());
+            resource.setQuota(resourceDto.getQuota());
+            resource.setUnit(resourceDto.getUnit());
+            resource.setAllocated(0);
+            resource.setAvailable(resourceDto.getQuota());
+            resourceRepository.save(resource);
+            
+            // 브릿지 생성 (entity: "request", entity_id: request_id, resource_id: resource_id)
+            ResourceBridge bridge = new ResourceBridge();
+            bridge.setEntity("request");
+            bridge.setEntityId(requestId);
+            bridge.setResource(resource);
+            resourceBridgeRepository.save(bridge);
+        }
+        
+        return resourceRequest.getId();
+    }
 	
-	@Transactional
-	public ResourceRequest allocateGpuByModel(ResourceRequest resourceRequest){
-		
-		Account account = accountRepository //계정이 있으면 통과
-				.findById(resourceRequest.getAccount().getId())
-	            .orElseThrow(() -> new IllegalArgumentException("Account not found: "));
-	    Resource resource = resourceRepository //해당 자원이 있으면 통과
-	    		.findById(resourceRequest.getResources().getId())
-	    		.orElseThrow(() -> new IllegalArgumentException("Resource not found: "));
-	    if (resourceRequest.getRequestedAt() == null) {
-	    	resourceRequest.setRequestedAt(LocalDateTime.now());
-	    }
-	    
-	    ResourceBridge resourceBridge = new ResourceBridge();
-	    resourceBridge.setResource(resource);
-	    resourceBridge.setEntity("request");
-	    ResourceRequest saved = resourceRequestRepository.save(resourceRequest);
-		 resourceAllocationService.allocateGpuByModel(saved);
-		 resourceBridgeRepository.save(resourceBridge);
-		 
-		 return saved;
-	}
 
 }

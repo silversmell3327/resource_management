@@ -39,6 +39,8 @@ import com.example.resourcemanagement.repository.ResourceBridgeRepository;
 import com.example.resourcemanagement.repository.ResourceRepository;
 import com.example.resourcemanagement.repository.ResourceRequestRepository;
 import com.example.resourcemanagement.service.ResourceRequestService;
+import com.example.resourcemanagement.service.ResourceAllocationService;
+import com.example.resourcemanagement.dto.ResourceRequestDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -77,6 +79,9 @@ class ResourceRequestStateBasedTest {
     
     @Autowired
     private ResourceRequestService resourceRequestService;
+    
+    @Autowired
+    private ResourceAllocationService resourceAllocationService;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -86,45 +91,11 @@ class ResourceRequestStateBasedTest {
 
 	private Long accountId;
 	
+	private Account account;
 
 
     @BeforeEach
     void setUp() {
-        Account account = new Account();
-        account.setAdmin("admin1");
-        account.setName("Account-1");
-        Account savedAccount = accountRepository.save(account);
-
-        this.accountId = savedAccount.getId(); 
-        Resource resource = new Resource();
-        ArrayList type = new ArrayList();
-        type.add(ResourceType.cpu);
-        type.add(ResourceType.gpu);
-        type.add(ResourceType.memory);
-        type.add(ResourceType.storage);
-        for(int i = 1 ;i<5;i++) {
-        Resource res = new Resource();
-        res.setId((long) i);
-        res.setType((ResourceType) type.get(i-1));
-        res.setQuota(100);
-        res.setAvailable(100);
-        res.setAllocated(0);
-        resourceRepository.save(res);
-        }
-        
-        // 초기 ResourceRequest를 위해 resource ID 1 (cpu) 조회
-        Resource initialResource = resourceRepository.findById(1L)
-        		.orElseThrow(() -> new IllegalArgumentException("Resource not found"));
-        
-        ResourceRequest initialRequest = new ResourceRequest();
-        initialRequest.setAccount(savedAccount);
-        initialRequest.setResources(initialResource);
-        initialRequest.setType(ResourceType.cpu);
-        initialRequest.setQuota(500.0);
-        initialRequest.setUnit("core");
-        initialRequest.setRequestedAt(LocalDateTime.now());
-
-        resourceRequestService.createResourceRequest(initialRequest);
     }
     
     @AfterEach
@@ -135,104 +106,106 @@ class ResourceRequestStateBasedTest {
         resourceBridgeRepository.deleteAll();
         accountRepository.deleteAll();
         resourceRepository.deleteAll();
-        
     }
+
     
+    /**
+     * TC1: 자원요청 누적으로 계정 quota 누적
+     * 
+     * JSON 테스트 케이스:
+     * {
+     *   "id": "TC1",
+     *   "title": "자원요청 누적으로 계정 quota 누적",
+     *   "initialState": {
+     *     "accounts": [{"id": "A1", "name": "Account-1", "admin": "admin1", "resources": [], "projectIds": []}],
+     *     "projects": []
+     *   },
+     *   "action": {
+     *     "type": "CreateResourceRequest",
+     *     "payload": {
+     *       "accountId": "A1",
+     *       "requestedAt": "2025-12-31T09:00:00+09:00",
+     *       "expiresAt": "2026-01-31T09:00:00+09:00",
+     *       "message": "cpu 100",
+     *       "resources": [{"type": "cpu", "modelId": null, "unit": "core", "quota": 100.0}]
+     *     }
+     *   },
+     *   "expectedState": {
+     *     "accounts": [{
+     *       "id": "A1",
+     *       "resources": [{"type": "cpu", "modelId": null, "unit": "core", "quota": 100.0, "allocated": 0.0, "available": 100.0}]
+     *     }]
+     *   }
+     * }
+     */
     @Test
-    @DisplayName("UC1_TC1") // 자원요청 누적으로 계정 quota 누적
-    void testTC1_CreateResourceRequest_AccumulateQuota() throws Exception {
-
-        ArrayList type = new ArrayList();
-        type.add(ResourceType.cpu);
-        type.add(ResourceType.gpu);
-        type.add(ResourceType.memory);
-        type.add(ResourceType.storage);
+    @DisplayName("TC1: 자원요청 누적으로 계정 quota 누적")
+    void testTC1_ResourceRequestAccumulateAccountQuota() throws Exception {
+        // ========== Given: initialState 설정 ==========
+        // Account A1 생성 (resources 빈 배열)
+        Account testAccount = new Account();
+        testAccount.setName("Account-1");
+        testAccount.setAdmin("admin1");
+        Account savedAccount = accountRepository.save(testAccount);
+        Long accountId = savedAccount.getId();
         
         // ========== When: action 실행 ==========
-        Map<String, Object> actionPayload = new HashMap<>();
-        actionPayload.put("accountId", accountId);
-        actionPayload.put("requestedAt", "2025-12-31T09:00:00+09:00");
-        actionPayload.put("expiresAt", "2026-01-31T09:00:00+09:00");
-        actionPayload.put("unit","core");
-        actionPayload.put("quota", 100.0);
-        
-        for(int i = 0;i<3;i++) {
-        	 actionPayload.put("resourceId", i+1);  
-        	 actionPayload.put("type",type.get(i));
-        mockMvc.perform(post("/resource-requests")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(actionPayload)))
-                .andExpect(status().isCreated())
-                .andReturn();
-        }
-        List<ResourceAllocation> requests = resourceAllocationRepository.findAll();
-        List<ResourceBridge> ResourceBridge =resourceBridgeRepository.findAll();
-        ResourceAllocation Request1 = requests.get(0);
-        assertEquals(600, Request1.getQuota());
-        
-        ResourceAllocation Request2 = requests.get(1);
-        assertEquals(100, Request2.getQuota());
-        
-        assertEquals(4,ResourceBridge.size());
-        
-    }
+        // 첫 번째 CreateResourceRequest 실행 (cpu 100)
+        ResourceRequestDto requestDto1 = new ResourceRequestDto();
+        requestDto1.setAccountId(accountId);
+        requestDto1.setRequestedAt(LocalDateTime.of(2025, 12, 31, 9, 0));
+        requestDto1.setExpiresAt(LocalDateTime.of(2026, 1, 31, 9, 0));
 
-    @Test
-    @DisplayName("UC1_TC2") //동일 타입 3회 요청 시 quota 누적(100*3=300)
-    void testTC2_CreateResourceRequest_AccumulateQuota() throws Exception {
+        ResourceRequestDto.ResourceDto resourceDto1 = new ResourceRequestDto.ResourceDto();
+        resourceDto1.setType("cpu");
+        resourceDto1.setModelId(null);
+        resourceDto1.setQuota(100);
+        resourceDto1.setUnit("core");
+        
+        List<ResourceRequestDto.ResourceDto> resources1 = new ArrayList<>();
+        resources1.add(resourceDto1);
+        requestDto1.setResources(resources1);
+        
+        // 첫 번째 자원요청 생성 및 승인
+        Long requestId1 = resourceRequestService.createResourceRequest(requestDto1);
+        resourceAllocationService.approveResourceRequest(requestId1);
+        
+        // 두 번째 CreateResourceRequest 실행 (같은 타입 cpu 50)
+        ResourceRequestDto requestDto2 = new ResourceRequestDto();
+        requestDto2.setAccountId(accountId);
+        requestDto2.setRequestedAt(LocalDateTime.of(2025, 12, 31, 10, 0));
+        requestDto2.setExpiresAt(LocalDateTime.of(2026, 1, 31, 10, 0));
 
-        // ========== When: action 실행 ==========
-        Map<String, Object> actionPayload = new HashMap<>();
-        actionPayload.put("accountId", accountId);
-        actionPayload.put("resourceId", 1L);  
-        actionPayload.put("requestedAt", "2025-12-31T09:00:00+09:00");
-        actionPayload.put("expiresAt", "2026-01-31T09:00:00+09:00");
-        actionPayload.put("type","cpu");
-        actionPayload.put("unit","core");
-        actionPayload.put("quota", 100.0);
+        ResourceRequestDto.ResourceDto resourceDto2 = new ResourceRequestDto.ResourceDto();
+        resourceDto2.setType("cpu");
+        resourceDto2.setModelId(null);
+        resourceDto2.setQuota(50);
+        resourceDto2.setUnit("core");
         
-        for(int i = 0;i<3;i++) {
-        mockMvc.perform(post("/resource-requests")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(actionPayload)))
-                .andExpect(status().isCreated())
-                .andReturn();
-        }
-        List<ResourceAllocation> requests = resourceAllocationRepository.findAll();
+        List<ResourceRequestDto.ResourceDto> resources2 = new ArrayList<>();
+        resources2.add(resourceDto2);
+        requestDto2.setResources(resources2);
         
-        ResourceAllocation createdRequest = requests.get(0);
-        assertEquals(800, createdRequest.getQuota());
+        // 두 번째 자원요청 생성 및 승인 (같은 타입이므로 quota 누적)
+        Long requestId2 = resourceRequestService.createResourceRequest(requestDto2);
+        resourceAllocationService.approveResourceRequest(requestId2);
         
-    }
+        // ========== Then: expectedState 검증 ==========
+        
+        // 4. Account A1의 resources 검증
+        List<ResourceBridge> accountBridges = resourceBridgeRepository.findByEntityAndEntityId("account", accountId);
+        ResourceBridge accountBridge = accountBridges.get(0);
 
-    @Test
-    @DisplayName("UC1_TC3") //GPU는 modelId별로 별도 자원으로 누적
-    void testTC3_CreateResourceRequest_AccumulateQuota() throws Exception {
+        Resource accountResource = accountBridge.getResource();
+        
+        // Resource 검증 (quota가 누적되어 150이어야 함)
+        assertEquals(ResourceType.cpu, accountResource.getType(), "cpu");
+        assertNull(accountResource.getModelId(), "null");
+        assertEquals(150, accountResource.getQuota(), "150");
+        assertEquals("core", accountResource.getUnit(), "core");
+        assertEquals(0, accountResource.getAllocated(), "0");
+        assertEquals(150, accountResource.getAvailable(), "150");
+        
 
-    	ArrayList list = new ArrayList();
-    	list.add("H100");
-    	list.add("A100");
-    	list.add("H100");
-        // ========== When: action 실행 ==========
-        Map<String, Object> actionPayload = new HashMap<>();
-        actionPayload.put("accountId", accountId);
-        actionPayload.put("resourceId", 3L);  
-        actionPayload.put("requestedAt", "2025-12-31T09:00:00+09:00");
-        actionPayload.put("expiresAt", "2026-01-31T09:00:00+09:00");
-        actionPayload.put("type","gpu");
-        actionPayload.put("quota", 1.0);
-        
-        for(int i = 0;i<list.size();i++) {
-        	
-       actionPayload.put("modelId",list.get(i));	
-        mockMvc.perform(post("/resource-requests/gpu")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(actionPayload)))
-                .andExpect(status().isCreated())
-                .andReturn();
-        }
-        List<ResourceAllocation> requests = resourceAllocationRepository.findAllByAccount_IdAndType(accountId,ResourceType.gpu);
-        
-        assertEquals(2, requests.size());
     }
 }

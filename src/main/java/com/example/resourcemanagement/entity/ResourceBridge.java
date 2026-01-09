@@ -53,6 +53,15 @@ public class ResourceBridge {
 	public void setResource(Resource resource) {
 		this.resource = resource;
 	}
+	
+	public Long getEntityId() {
+		return entityId;
+	}
+
+	public void setEntityId(Long entityId) {
+		this.entityId = entityId;
+	}
+
 
 	@Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -64,10 +73,11 @@ public class ResourceBridge {
 	
 	@Column(name = "entity_id")
 	private Long entityId;
-	
+
 	@ManyToOne
 	@JoinColumn(name = "resource_id")
     private Resource resource;
+
 
 	
 }

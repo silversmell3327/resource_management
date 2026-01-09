@@ -65,7 +65,6 @@ public class ResourceRequest {
 		this.account = account;
 	}
 	@Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long Id;
 	

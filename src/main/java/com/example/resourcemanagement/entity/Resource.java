@@ -76,6 +76,13 @@ public class Resource {
 	public void setAvailable(int available) {
 		this.available = available;
 	}
+    public String getUnit() {
+		return unit;
+	}
+
+	public void setUnit(String unit) {
+		this.unit = unit;
+	}
 
 	@Id
     @Column(name = "id")
@@ -93,6 +100,9 @@ public class Resource {
 
     @Column(nullable = false)
     private int allocated;
+    
+	@Column(nullable = false)
+    private String unit;
 
     @Column(nullable = false)
     private int available;
