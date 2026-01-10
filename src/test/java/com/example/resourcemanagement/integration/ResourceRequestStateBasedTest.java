@@ -179,16 +179,38 @@ class ResourceRequestStateBasedTest {
         ResourceRequestDto.ResourceDto resourceDto2 = new ResourceRequestDto.ResourceDto();
         resourceDto2.setType("cpu");
         resourceDto2.setModelId(null);
-        resourceDto2.setQuota(50);
+        resourceDto2.setQuota(100);
         resourceDto2.setUnit("core");
+        
         
         List<ResourceRequestDto.ResourceDto> resources2 = new ArrayList<>();
         resources2.add(resourceDto2);
         requestDto2.setResources(resources2);
         
-        // 두 번째 자원요청 생성 및 승인 (같은 타입이므로 quota 누적)
         Long requestId2 = resourceRequestService.createResourceRequest(requestDto2);
         resourceAllocationService.approveResourceRequest(requestId2);
+        
+        
+        
+        // 세 번째 자원요청 생성 및 승인 (같은 타입이므로 quota 누적)
+        ResourceRequestDto requestDto3 = new ResourceRequestDto();
+        requestDto3.setAccountId(accountId);
+        requestDto3.setRequestedAt(LocalDateTime.of(2025, 12, 31, 10, 0));
+        requestDto3.setExpiresAt(LocalDateTime.of(2026, 1, 31, 10, 0));
+
+        ResourceRequestDto.ResourceDto resourceDto3 = new ResourceRequestDto.ResourceDto();
+        resourceDto3.setType("cpu");
+        resourceDto3.setModelId(null);
+        resourceDto3.setQuota(100);
+        resourceDto3.setUnit("core");
+        
+        List<ResourceRequestDto.ResourceDto> resources3 = new ArrayList<>();
+        resources3.add(resourceDto3);
+        requestDto3.setResources(resources3);
+        
+        // 세 번째 자원요청 생성 및 승인 (같은 타입이므로 quota 누적)
+        Long requestId3 = resourceRequestService.createResourceRequest(requestDto3);
+        resourceAllocationService.approveResourceRequest(requestId3);
         
         // ========== Then: expectedState 검증 ==========
         
@@ -201,10 +223,10 @@ class ResourceRequestStateBasedTest {
         // Resource 검증 (quota가 누적되어 150이어야 함)
         assertEquals(ResourceType.cpu, accountResource.getType(), "cpu");
         assertNull(accountResource.getModelId(), "null");
-        assertEquals(150, accountResource.getQuota(), "150");
+        assertEquals(300, accountResource.getQuota(), "300");
         assertEquals("core", accountResource.getUnit(), "core");
         assertEquals(0, accountResource.getAllocated(), "0");
-        assertEquals(150, accountResource.getAvailable(), "150");
+        assertEquals(300, accountResource.getAvailable(), "300");
         
 
     }
