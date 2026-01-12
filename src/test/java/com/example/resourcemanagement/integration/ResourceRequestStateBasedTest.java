@@ -148,86 +148,58 @@ class ResourceRequestStateBasedTest {
         testAccount.setAdmin("admin1");
         Account savedAccount = accountRepository.save(testAccount);
         Long accountId = savedAccount.getId();
+        ResourceRequestDto request1 = new ResourceRequestDto();
+        request1.setAccountId(testAccount.getId());
+        request1.setActivatedAt(LocalDateTime.of(2025, 12, 31, 9, 0));
+        request1.setExpiredAt(LocalDateTime.of(2026, 1, 31, 9, 0));
         
+        List<Resource> resources = new ArrayList<>();
+        
+        Resource resource1 = new Resource();
+        resource1.setType(ResourceType.cpu);
+        resource1.setModelId(null);
+        resource1.setQuota(100);
+        resource1.setUnit("core");        
+        resources.add(resource1);
+        
+        Resource resource2 = new Resource();
+        resource2.setType(ResourceType.cpu);
+        resource2.setModelId(null);
+        resource2.setQuota(100);
+        resource2.setUnit("core");
+        resources.add(resource2);        
+        
+        Resource resource3 = new Resource();
+        resource3.setType(ResourceType.memory);
+        resource3.setModelId(null);
+        resource3.setQuota(10);
+        resource3.setUnit("GB");
+        
+        resources.add(resource3);
+        
+        Resource resource4 = new Resource();
+        resource4.setType(ResourceType.gpu);
+        resource4.setModelId(null);
+        resource4.setQuota(10);
+        resource4.setUnit("EA");
+        
+        resources.add(resource4);
+        request1.setResources(resources);
         // ========== When: action 실행 ==========
-        // 첫 번째 CreateResourceRequest 실행 (cpu 100)
-        ResourceRequestDto requestDto1 = new ResourceRequestDto();
-        requestDto1.setAccountId(accountId);
-        requestDto1.setRequestedAt(LocalDateTime.of(2025, 12, 31, 9, 0));
-        requestDto1.setExpiresAt(LocalDateTime.of(2026, 1, 31, 9, 0));
-
-        ResourceRequestDto.ResourceDto resourceDto1 = new ResourceRequestDto.ResourceDto();
-        resourceDto1.setType("cpu");
-        resourceDto1.setModelId(null);
-        resourceDto1.setQuota(100);
-        resourceDto1.setUnit("core");
-        
-        List<ResourceRequestDto.ResourceDto> resources1 = new ArrayList<>();
-        resources1.add(resourceDto1);
-        requestDto1.setResources(resources1);
-        
-        // 첫 번째 자원요청 생성 및 승인
-        Long requestId1 = resourceRequestService.createResourceRequest(requestDto1);
-        resourceAllocationService.approveResourceRequest(requestId1);
-        
-        // 두 번째 CreateResourceRequest 실행 (같은 타입 cpu 50)
-        ResourceRequestDto requestDto2 = new ResourceRequestDto();
-        requestDto2.setAccountId(accountId);
-        requestDto2.setRequestedAt(LocalDateTime.of(2025, 12, 31, 10, 0));
-        requestDto2.setExpiresAt(LocalDateTime.of(2026, 1, 31, 10, 0));
-
-        ResourceRequestDto.ResourceDto resourceDto2 = new ResourceRequestDto.ResourceDto();
-        resourceDto2.setType("cpu");
-        resourceDto2.setModelId(null);
-        resourceDto2.setQuota(100);
-        resourceDto2.setUnit("core");
-        
-        
-        List<ResourceRequestDto.ResourceDto> resources2 = new ArrayList<>();
-        resources2.add(resourceDto2);
-        requestDto2.setResources(resources2);
-        
-        Long requestId2 = resourceRequestService.createResourceRequest(requestDto2);
-        resourceAllocationService.approveResourceRequest(requestId2);
-        
-        
-        
-        // 세 번째 자원요청 생성 및 승인 (같은 타입이므로 quota 누적)
-        ResourceRequestDto requestDto3 = new ResourceRequestDto();
-        requestDto3.setAccountId(accountId);
-        requestDto3.setRequestedAt(LocalDateTime.of(2025, 12, 31, 10, 0));
-        requestDto3.setExpiresAt(LocalDateTime.of(2026, 1, 31, 10, 0));
-
-        ResourceRequestDto.ResourceDto resourceDto3 = new ResourceRequestDto.ResourceDto();
-        resourceDto3.setType("cpu");
-        resourceDto3.setModelId(null);
-        resourceDto3.setQuota(100);
-        resourceDto3.setUnit("core");
-        
-        List<ResourceRequestDto.ResourceDto> resources3 = new ArrayList<>();
-        resources3.add(resourceDto3);
-        requestDto3.setResources(resources3);
-        
-        // 세 번째 자원요청 생성 및 승인 (같은 타입이므로 quota 누적)
-        Long requestId3 = resourceRequestService.createResourceRequest(requestDto3);
-        resourceAllocationService.approveResourceRequest(requestId3);
-        
-        // ========== Then: expectedState 검증 ==========
-        
-        // 4. Account A1의 resources 검증
-        List<ResourceBridge> accountBridges = resourceBridgeRepository.findByEntityAndEntityId("account", accountId);
-        ResourceBridge accountBridge = accountBridges.get(0);
-
-        Resource accountResource = accountBridge.getResource();
-        
-        // Resource 검증 (quota가 누적되어 150이어야 함)
-        assertEquals(ResourceType.cpu, accountResource.getType(), "cpu");
-        assertNull(accountResource.getModelId(), "null");
-        assertEquals(300, accountResource.getQuota(), "300");
-        assertEquals("core", accountResource.getUnit(), "core");
-        assertEquals(0, accountResource.getAllocated(), "0");
-        assertEquals(300, accountResource.getAvailable(), "300");
-        
-
+        mockMvc.perform(post("/resource-requests")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request1)))
+                .andExpect(status().isOk());
+        List<ResourceRequest> allRequests = resourceRequestRepository.findAll();
+        for(int i = 0 ;i<allRequests.size();i++) {
+        Long requestId = allRequests.get(i).getId();
+        mockMvc.perform(get("/resource-requests/"+requestId+"/approve"))
+                .andExpect(status().isOk());
+        }
+        // approve 후 다시 조회해서 status 확인
+        List<ResourceRequest> approvedRequests = resourceRequestRepository.findAll();
+        List<ResourceBridge> resourceBridge = resourceBridgeRepository.findByEntity("account");
+        assertEquals(3, resourceBridge.size());
+        assertEquals("approved", approvedRequests.get(0).getStatus());
     }
 }

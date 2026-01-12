@@ -28,11 +28,6 @@ public class ResourceRequestService {
 	@Autowired
 	AccountRepository accountRepository; 
 	
-	@Autowired
-	ResourceRepository resourceRepository; 
-	
-	@Autowired
-	ResourceBridgeRepository resourceBridgeRepository; 
 	
 	
 	@Autowired
@@ -43,6 +38,9 @@ public class ResourceRequestService {
 	
 	@Autowired
 	IdGenerationService idGenerationService;
+	
+	@Autowired
+	ResourceBridgeService resourceBridgeService;
 	
 	@Autowired
 	ResourceAllocationRepository resourceAllocationRepository;
@@ -56,32 +54,16 @@ public class ResourceRequestService {
         // 2. ResourceRequest 생성 (ID: 10~99)
         ResourceRequest resourceRequest = new ResourceRequest();
         Long requestId = idGenerationService.generateRequestId();
+        resourceRequest.setStatus("required");
         resourceRequest.setId(requestId);
         resourceRequest.setAccount(account);
-        resourceRequest.setRequestedAt(dto.getRequestedAt());
-        resourceRequest.setExpiresAt(dto.getExpiresAt());
+        resourceRequest.setRequestedAt(dto.getActivatedAt());
+        resourceRequest.setExpiresAt(dto.getExpiredAt());
         resourceRequestRepository.save(resourceRequest);
         
         // 3. Resource 생성 및 브릿지 연결
-        for (ResourceRequestDto.ResourceDto resourceDto : dto.getResources()) {
-            // Resource 생성 (ID: 100~999)
-            Resource resource = new Resource();
-            Long resourceId = idGenerationService.generateResourceId();
-            resource.setId(resourceId);
-            resource.setType(ResourceType.valueOf(resourceDto.getType()));
-            resource.setModelId(resourceDto.getModelId());
-            resource.setQuota(resourceDto.getQuota());
-            resource.setUnit(resourceDto.getUnit());
-            resource.setAllocated(0);
-            resource.setAvailable(resourceDto.getQuota());
-            resourceRepository.save(resource);
-            
-            // 브릿지 생성 (entity: "request", entity_id: request_id, resource_id: resource_id)
-            ResourceBridge bridge = new ResourceBridge();
-            bridge.setEntity("request");
-            bridge.setEntityId(requestId);
-            bridge.setResource(resource);
-            resourceBridgeRepository.save(bridge);
+        for (Resource resourceFromDto : dto.getResources()) {
+            resourceBridgeService.createResourceAndBridge("request", requestId, resourceFromDto);
         }
         
         return resourceRequest.getId();

@@ -64,6 +64,13 @@ public class ResourceRequest {
 	public void setAccount(Account account) {
 		this.account = account;
 	}
+    public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
 	@Id
     @Column(name = "id")
     private Long Id;
@@ -73,7 +80,8 @@ public class ResourceRequest {
 
     @Column(name = "expires_at")
     private LocalDateTime expiresAt;
-
+	@Column(name = "status")
+    private String status;
 	@ManyToOne
 	@JoinColumn(name = "account_id")
 	private Account account;

@@ -50,9 +50,19 @@ public class ResourceAllocation {
 		public void setResourceRequest(ResourceRequest resourceRequest) {
 			this.resourceRequest = resourceRequest;
 		}
+
+	  	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
       @Id
 	   private Long id;
 
+		@Column(name = "status")
+	    private String status;
 	    @ManyToOne(fetch = FetchType.LAZY)
 	    @JoinColumn(name = "resource_request_id", nullable = false)
 	    private ResourceRequest resourceRequest;

@@ -13,4 +13,5 @@ import com.example.resourcemanagement.entity.ResourceType;
 @Repository
 public interface ResourceBridgeRepository extends JpaRepository<ResourceBridge, Long> {
 	List<ResourceBridge> findByEntityAndEntityId(String entity, Long entityId);
+	List<ResourceBridge>findByEntity(String entity);
 }
