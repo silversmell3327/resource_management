@@ -49,7 +49,7 @@ public class ResourceAllocationService {
 	 * 승인 시 allocation, bridge, resource 생성
 	 */
 	@Transactional
-	public Resource approveResourceRequest(Long requestId) {
+	public void approveResourceRequest(Long requestId) {
 	    ResourceRequest resourceRequest = resourceRequestRepository.findById(requestId)
 	        .orElseThrow(() -> new IllegalArgumentException("ResourceRequest not found"));
 
@@ -58,7 +58,6 @@ public class ResourceAllocationService {
 	    List<ResourceBridge> requestBridges =
 	        resourceBridgeRepository.findByEntityAndEntityId("request", requestId);
 
-	    Resource lastResource = null;
 	    ResourceAllocation allocation = new ResourceAllocation();
 	    allocation.setStatus("ACTIVE");
 	    for (ResourceBridge requestBridge : requestBridges) {
@@ -70,12 +69,10 @@ public class ResourceAllocationService {
 	        resourceAllocationRepository.save(allocation);
 
 	        resourceBridgeService.createResourceAndBridge("allocation", allocationId, resource);
-	        lastResource = resourceBridgeService.createOrAccumulateAccountResource(
+	        resourceBridgeService.createOrAccumulateAccountResource(
 	            resourceRequest.getAccount().getId(), resource
 	        );
 	    }
-	    
-	    return lastResource;
 	}
 	
 	@Transactional
