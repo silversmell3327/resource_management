@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -148,47 +150,42 @@ class ResourceRequestStateBasedTest {
         testAccount.setAdmin("admin1");
         Account savedAccount = accountRepository.save(testAccount);
         Long accountId = savedAccount.getId();
-        ResourceRequestDto request1 = new ResourceRequestDto();
-        request1.setAccountId(testAccount.getId());
-        request1.setActivatedAt(LocalDateTime.of(2025, 12, 31, 9, 0));
-        request1.setExpiredAt(LocalDateTime.of(2026, 1, 31, 9, 0));
+        JSONObject json = new JSONObject();
+        json.put("accountId", testAccount.getId());
+        json.put("activatedAt", "2025-12-31T09:00:00");
+        json.put("expiredAt", "2026-01-31T09:00:00");
+
+        JSONArray resources = new JSONArray();
+        JSONObject resource1 = new JSONObject();
+        resource1.put("type", "cpu");
+        resource1.put("unit", "core");
+        resource1.put("quota", 100);
+        resources.put(resource1);
         
-        List<Resource> resources = new ArrayList<>();
+        JSONObject resource2 = new JSONObject();
+        resource2.put("type", "cpu");
+        resource2.put("unit", "core");
+        resource2.put("quota", 100);
+        resources.put(resource2);
         
-        Resource resource1 = new Resource();
-        resource1.setType(ResourceType.cpu);
-        resource1.setModelId(null);
-        resource1.setQuota(100);
-        resource1.setUnit("core");        
-        resources.add(resource1);
+        JSONObject resource3 = new JSONObject();
+        resource3.put("type", "memory");
+        resource3.put("unit", "GB");
+        resource3.put("quota", 10);
+        resources.put(resource3);
         
-        Resource resource2 = new Resource();
-        resource2.setType(ResourceType.cpu);
-        resource2.setModelId(null);
-        resource2.setQuota(100);
-        resource2.setUnit("core");
-        resources.add(resource2);        
-        
-        Resource resource3 = new Resource();
-        resource3.setType(ResourceType.memory);
-        resource3.setModelId(null);
-        resource3.setQuota(10);
-        resource3.setUnit("GB");
-        
-        resources.add(resource3);
-        
-        Resource resource4 = new Resource();
-        resource4.setType(ResourceType.gpu);
-        resource4.setModelId(null);
-        resource4.setQuota(10);
-        resource4.setUnit("EA");
-        
-        resources.add(resource4);
-        request1.setResources(resources);
+        JSONObject resource4 = new JSONObject();
+        resource4.put("type", "gpu");
+        resource4.put("unit", "EA");
+        resource4.put("quota", 10);
+        resources.put(resource4);
+        json.put("resources", resources);
+
         // ========== When: action 실행 ==========
+        String jsonString = json.toString();
         mockMvc.perform(post("/resource-requests")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request1)))
+                .content(jsonString))
                 .andExpect(status().isOk());
         List<ResourceRequest> allRequests = resourceRequestRepository.findAll();
         for(int i = 0 ;i<allRequests.size();i++) {

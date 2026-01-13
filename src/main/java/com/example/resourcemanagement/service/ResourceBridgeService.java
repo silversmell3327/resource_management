@@ -110,7 +110,6 @@ public class ResourceBridgeService {
             resourceRepository.save(existingResource);
             return existingResource;
         } else {
-            // 새로운 Resource와 Bridge 생성
             return createResourceAndBridge("account", accountId, sourceResource);
         }
     }
