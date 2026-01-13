@@ -58,13 +58,9 @@ public class ResourceRequestController {
     }
     @PostMapping
     public ResponseEntity<List<ResourceRequest>> createResourceRequest(@RequestBody ResourceRequestDto dto) {
-    	List<Long> requestIds = new ArrayList<>();
-        for(int i = 0; i < dto.getResources().size(); i++) {
-            Long requestId = resourceRequestService.createResourceRequest(dto);
-            requestIds.add(requestId);
-        }
+         resourceRequestService.createResourceRequest(dto);
         
-        List<ResourceRequest> resourceRequests = resourceRequestRepository.findAllById(requestIds);
+        List<ResourceRequest> resourceRequests = resourceRequestRepository.findAll();
         return ResponseEntity.ok(resourceRequests);
 
     }

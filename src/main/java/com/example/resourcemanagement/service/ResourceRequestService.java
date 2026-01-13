@@ -46,12 +46,15 @@ public class ResourceRequestService {
 	ResourceAllocationRepository resourceAllocationRepository;
 	
 	@Transactional
-    public Long createResourceRequest(ResourceRequestDto dto) {
+    public void createResourceRequest(ResourceRequestDto dto) {
         // 1. Account 조회
         Account account = accountRepository.findById(dto.getAccountId())
             .orElseThrow(() -> new IllegalArgumentException("Account not found"));
         
         // 2. ResourceRequest 생성 (ID: 10~99)
+        // 3. 여러 개의 리소스를 순회하며 처리
+        
+        for(Resource resourceDto:dto.getResources()) {
         ResourceRequest resourceRequest = new ResourceRequest();
         Long requestId = idGenerationService.generateRequestId();
         resourceRequest.setStatus("required");
@@ -60,14 +63,9 @@ public class ResourceRequestService {
         resourceRequest.setRequestedAt(dto.getActivatedAt());
         resourceRequest.setExpiresAt(dto.getExpiredAt());
         resourceRequestRepository.save(resourceRequest);
-        
-        // 3. Resource 생성 및 브릿지 연결
-        for (Resource resourceFromDto : dto.getResources()) {
-            resourceBridgeService.createResourceAndBridge("request", requestId, resourceFromDto);
+        resourceBridgeService.createResourceAndBridge("request", requestId, resourceDto);
         }
-        
-        return resourceRequest.getId();
-    }
-	
 
+        
+    }
 }
