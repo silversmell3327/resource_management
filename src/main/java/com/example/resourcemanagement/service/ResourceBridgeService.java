@@ -121,7 +121,6 @@ public class ResourceBridgeService {
                                  (resource1.getModelId() != null && resource1.getModelId().equals(resource2.getModelId()));
         boolean unitMatches = (resource1.getUnit() == null && resource2.getUnit() == null) ||
                               (resource1.getUnit() != null && resource1.getUnit().equals(resource2.getUnit()));
-        
         return typeMatches && modelIdMatches && unitMatches;
     }
 }

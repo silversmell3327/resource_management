@@ -150,39 +150,42 @@ class ResourceRequestStateBasedTest {
         testAccount.setAdmin("admin1");
         Account savedAccount = accountRepository.save(testAccount);
         Long accountId = savedAccount.getId();
-        JSONObject json = new JSONObject();
-        json.put("accountId", testAccount.getId());
-        json.put("activatedAt", "2025-12-31T09:00:00");
-        json.put("expiredAt", "2026-01-31T09:00:00");
-
-        JSONArray resources = new JSONArray();
-        JSONObject resource1 = new JSONObject();
-        resource1.put("type", "cpu");
-        resource1.put("unit", "core");
-        resource1.put("quota", 100);
-        resources.put(resource1);
         
-        JSONObject resource2 = new JSONObject();
-        resource2.put("type", "cpu");
-        resource2.put("unit", "core");
-        resource2.put("quota", 100);
-        resources.put(resource2);
+        // 멀티라인 문자열로 JSON 정의
+        String jsonString = """
+            {
+                "accountId": %d,
+                "activatedAt": "2025-12-31T09:00:00",
+                "expiredAt": "2026-01-31T09:00:00",
+                "resources": [
+                    {
+                        "type": "cpu",
+                        "unit": "core",
+                        "quota": 100
+                    },
+                    {
+                        "type": "cpu",
+                        "unit": "core",
+                        "quota": 100
+                    },
+                    {
+                        "type": "memory",
+                        "unit": "GB",
+                        "quota": 10
+                    },
+                    {
+                        "type": "gpu",
+                        "unit": "EA",
+                        "quota": 10
+                    }
+                ]
+            }
+            """.formatted(testAccount.getId());
         
-        JSONObject resource3 = new JSONObject();
-        resource3.put("type", "memory");
-        resource3.put("unit", "GB");
-        resource3.put("quota", 10);
-        resources.put(resource3);
-        
-        JSONObject resource4 = new JSONObject();
-        resource4.put("type", "gpu");
-        resource4.put("unit", "EA");
-        resource4.put("quota", 10);
-        resources.put(resource4);
-        json.put("resources", resources);
+        // JSONObject로 파싱 (필요한 경우)
+        JSONObject json = new JSONObject(jsonString);
 
         // ========== When: action 실행 ==========
-        String jsonString = json.toString();
         mockMvc.perform(post("/resource-requests")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonString))
