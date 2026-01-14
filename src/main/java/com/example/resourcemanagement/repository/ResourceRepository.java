@@ -1,5 +1,6 @@
 package com.example.resourcemanagement.repository;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,5 +12,6 @@ import com.example.resourcemanagement.entity.ResourceType;
 
 @Repository
 public interface ResourceRepository extends JpaRepository<Resource, Long> {
+	List<ResourceBridge> findByTypeAndModelId(String type, String modelId);
 
 }

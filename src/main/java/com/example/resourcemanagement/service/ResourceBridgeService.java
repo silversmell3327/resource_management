@@ -49,9 +49,9 @@ public class ResourceBridgeService {
     
     /**
      * 소스 Resource를 기반으로 새로운 Resource 생성 (ID 자동 생성)
+     * 내부 helper 메서드이므로 @Transactional 제거 (외부 진입점의 트랜잭션에 포함됨)
      */
-    @Transactional
-    public Resource createResourceFromSource(Resource sourceResource) {
+    private Resource createResourceFromSource(Resource sourceResource) {
         Resource resource = new Resource();
         Long resourceId = idGenerationService.generateResourceId();
         resource.setId(resourceId);
@@ -67,9 +67,9 @@ public class ResourceBridgeService {
     
     /**
      * ResourceBridge 생성
+     * 내부 helper 메서드이므로 @Transactional 제거 (외부 진입점의 트랜잭션에 포함됨)
      */
-    @Transactional
-    public ResourceBridge createBridge(String entityType, Long entityId, Resource resource) {
+    private ResourceBridge createBridge(String entityType, Long entityId, Resource resource) {
         ResourceBridge bridge = new ResourceBridge();
         bridge.setEntity(entityType);
         bridge.setEntityId(entityId);
